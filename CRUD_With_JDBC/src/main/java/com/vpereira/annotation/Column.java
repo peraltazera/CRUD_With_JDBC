@@ -11,4 +11,6 @@ public @interface Column {
     String value();
     boolean notNull() default false;
     int length() default 255;
+    String set() default "";
+    String get() default "";
 }

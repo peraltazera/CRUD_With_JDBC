@@ -1,12 +1,13 @@
 package com.vpereira.service;
 
+import com.vpereira.model.Client;
 import com.vpereira.repository.ClientRepository;
+import com.vpereira.repository.generic.GenericRepository;
+import com.vpereira.service.generic.GenericService;
 
-public class ClientService {
+public class ClientService extends GenericService<Client, Long> implements IClientService{
 
-    ClientRepository clientRepository;
-
-    ClientService(ClientRepository clientRepository){
-        this.clientRepository = clientRepository;
+    public ClientService(ClientRepository clientRepository) {
+        super(clientRepository);
     }
 }

@@ -74,4 +74,15 @@ public class Client implements Entity{
     public int hashCode() {
         return Objects.hash(id, firstName, lastName, email, gender);
     }
+
+    @Override
+    public String toString() {
+        return "Client{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", gender='" + gender + '\'' +
+                '}';
+    }
 }

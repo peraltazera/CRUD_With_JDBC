@@ -1,12 +1,10 @@
 package com.vpereira.repository.generic.jdbc;
 
-import com.vpereira.Main;
 import com.vpereira.annotation.Column;
 import com.vpereira.annotation.Id;
 import com.vpereira.annotation.Table;
-import org.reflections.Reflections;
+import com.vpereira.service.generic.GenericReflections;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,7 +20,7 @@ public class TablesFactory {
 
     public static void createTablesJDBC() {
         try{
-            Set<Class<?>> classes = getClassesWithAnnotationTable();
+            Set<Class<?>> classes = GenericReflections.getClassesWithAnnotation(Table.class);
             List<Class<?>> filteredClasses = verifyTableDataBase(classes);
             List<String> listSQL = generateSQL(filteredClasses);
             executeSQL(listSQL);
@@ -98,13 +96,14 @@ public class TablesFactory {
         for (Class<?> clazz : classes) {
             Table table = clazz.getAnnotation(Table.class);
             Field[] fields = clazz.getDeclaredFields();
-            List<Column> columnFields = getAnnotationsInFields(fields, Column.class);
-            Field idField = getFieldWithAnnotation(fields, Id.class);
+            List<Column> columnFields = GenericReflections.getAnnotationsInFields(fields, Column.class);
+            Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
 
             String sql = "CREATE TABLE " + table.value() + " (";
-            sql += idField.getName() + " " + javaTypeConverterToSQLType(idField) + " PRIMARY KEY";
+            sql += idField.getName() + " SERIAL PRIMARY KEY";
+            //sql += idField.getName() + " " +  GenericReflections.javaTypeConverterToSQLType(idField) + " PRIMARY KEY";
             for (int i = 0; i < columnFields.stream().count(); i++) {
-                sql += ", " + columnFields.get(i).value() + " " + javaTypeConverterToSQLType(fields[i+1]);
+                sql += ", " + columnFields.get(i).value() + " " +  GenericReflections.javaTypeConverterToSQLType(fields[i+1]);
                 if(columnFields.get(i).notNull()){
                     sql += " NOT NULL";
                 }
@@ -116,69 +115,5 @@ public class TablesFactory {
         }
         return listSQL;
     }
-
-    private static String javaTypeConverterToSQLType(Field field){
-        String strReturn = "";
-        if(field.getType() == Short.class || field.getType() == short.class) strReturn = "SMALLINT";
-        else if(field.getType() == Integer.class || field.getType() == int.class) strReturn = "INT";
-        else if(field.getType() == Long.class || field.getType() == long.class) strReturn = "BIGINT";
-        else if(field.getType() == Float.class || field.getType() == float.class) strReturn = "FLOAT";
-        else if(field.getType() == Double.class || field.getType() == double.class) strReturn = "double precision";
-        else if(field.getType() == Character.class || field.getType() == char.class) strReturn = "CHAR";
-        else if(field.getType() == Boolean.class || field.getType() == boolean.class) strReturn = "BOOLEAN";
-        else if(field.getType() == Byte.class || field.getType() == byte.class) strReturn = "bytea";
-        else if(field.getType() == String.class){
-            strReturn = "VARCHAR(" + field.getAnnotation(Column.class).length() + ")";
-        }
-        else {
-            strReturn = field.getType().getSimpleName();
-        }
-        return strReturn;
-    }
-
-    private static <T extends Annotation> Field getFieldWithAnnotation(Field[] fields, Class<T> annotationClass) {
-        Field idField = null;
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(annotationClass)) {
-                idField = field;
-            }
-        }
-        return idField;
-    }
-
-    private static <T extends Annotation> List<Field> getFieldsWithAnnotation(Field[] fields, Class<T> annotationClass) {
-        List<Field> fieldsWithAnnotation = new ArrayList<>();
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(Column.class)) {
-                fieldsWithAnnotation.add(field);
-            }
-        }
-        return fieldsWithAnnotation;
-    }
-
-    private static <T extends Annotation> List<T> getAnnotationsInFields(Field[] fields, Class<T> annotationClass) {
-        List<T> annotatedFields = new ArrayList<>();
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(Column.class)) {
-                annotatedFields.add(field.getAnnotation(annotationClass));
-            }
-        }
-        return annotatedFields;
-    }
-
-    private static Set<Class<?>> getClassesWithAnnotationTable() {
-        String packageName = Main.class.getPackageName();
-        Set<Class<?>> classes = null;
-        try {
-            // Encontrar todas as classes no pacote
-            Reflections reflections = new Reflections(packageName);
-            classes = reflections.getTypesAnnotatedWith(Table.class);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return classes;
-    }
-
-
 }
 
