@@ -1,4 +1,4 @@
-package com.vpereira.model;
+package com.vpereira.core.domain;
 
 import com.vpereira.annotation.Column;
 import com.vpereira.annotation.Id;

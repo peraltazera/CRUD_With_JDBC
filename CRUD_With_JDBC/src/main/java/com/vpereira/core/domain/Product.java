@@ -1,4 +1,4 @@
-package com.vpereira.model;
+package com.vpereira.core.domain;
 
 import com.vpereira.annotation.Column;
 import com.vpereira.annotation.Id;
@@ -63,5 +63,15 @@ public class Product implements Entity{
     @Override
     public int hashCode() {
         return Objects.hash(code, name, price, desc);
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "code=" + code +
+                ", name='" + name + '\'' +
+                ", price=" + price +
+                ", desc='" + desc + '\'' +
+                '}';
     }
 }

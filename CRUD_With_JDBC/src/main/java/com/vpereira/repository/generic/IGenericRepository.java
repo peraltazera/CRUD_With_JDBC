@@ -1,10 +1,9 @@
 package com.vpereira.repository.generic;
 
-import com.vpereira.model.Entity;
+import com.vpereira.core.domain.Entity;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
 public interface IGenericRepository <T extends Entity, E extends Serializable>{
 
@@ -16,6 +15,6 @@ public interface IGenericRepository <T extends Entity, E extends Serializable>{
     public String generateUpdateSQL(T entity);
     public void delete(Class<T> entityClass, E id);
     public String generateDeleteSQL(Class<T> entityClass, E id);
-    public void executeSQL(String sql);
-    public ResultSet querySQL(String sql);
+    //public void executeSQL(String sql, String greenMsg, String redMsg);
+    //public ResultSet querySQL(String sql);
 }

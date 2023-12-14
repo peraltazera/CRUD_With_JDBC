@@ -1,8 +1,6 @@
 package com.vpereira.repository.generic.jdbc;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class ConnectionFactory {
 
@@ -30,6 +28,23 @@ public class ConnectionFactory {
                     "jdbc:postgresql://localhost:5432/CRUD_With_JDBC", "postgres", "admin");
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void closeConnection(Connection connection, PreparedStatement stm, ResultSet rs) {
+        try {
+            if (rs != null && !rs.isClosed()) {
+                rs.close();
+            }
+            if (stm != null && !stm.isClosed()) {
+                stm.close();
+            }
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
         }
     }
 }

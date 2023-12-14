@@ -1,8 +1,7 @@
 package com.vpereira.service;
 
-import com.vpereira.model.Client;
+import com.vpereira.core.domain.Client;
 import com.vpereira.repository.ClientRepository;
-import com.vpereira.repository.generic.GenericRepository;
 import com.vpereira.service.generic.GenericService;
 
 public class ClientService extends GenericService<Client, Long> implements IClientService{

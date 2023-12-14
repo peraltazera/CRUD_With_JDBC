@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.vpereira.repository.generic.jdbc.ConnectionFactory.getConnection;
+import static com.vpereira.repository.generic.jdbc.ConnectionFactory.closeConnection;
 
 public class TablesFactory {
 
@@ -30,6 +31,10 @@ public class TablesFactory {
     }
 
     private static List<Class<?>> verifyTableDataBase(Set<Class<?>> classes) throws SQLException {
+        Connection connection = null;
+        PreparedStatement stm = null;
+        ResultSet resultSet = null;
+        connection = getConnection();
         List<Class<?>> classesTableNotExist = new ArrayList<>();
         for (Class<?> clazz : classes) {
             String nameTable = clazz.getAnnotation(Table.class).value().toLowerCase();
@@ -40,7 +45,8 @@ public class TablesFactory {
                        WHERE  table_name = '%s'
                     );
                     """.formatted(nameTable);
-            ResultSet resultSet = sqlQuery(sql);
+            stm = connection.prepareStatement(sql);
+            resultSet = stm.executeQuery();
             if (resultSet.next()) {
                 // O valor retornado é um booleano, onde true significa que a tabela existe
                 boolean tableExist = resultSet.getBoolean(1);
@@ -49,17 +55,8 @@ public class TablesFactory {
                 }
             }
         }
+        closeConnection(connection, stm, resultSet);
         return classesTableNotExist;
-    }
-
-    private static ResultSet sqlQuery(String sql) throws SQLException {
-        Connection connection = null;
-        PreparedStatement stm = null;
-        ResultSet resultSet = null;
-        connection = getConnection();
-        stm = connection.prepareStatement(sql);
-        resultSet = stm.executeQuery();
-        return resultSet;
     }
 
     private static void executeSQL(List<String> listSQL) throws SQLException {
@@ -72,23 +69,7 @@ public class TablesFactory {
             stm = connection.prepareStatement(sql);
             stm.executeUpdate();
         }
-    }
-
-    private static void closeConnection(Connection connection, PreparedStatement stm, ResultSet rs) {
-        try {
-            if (rs != null && !rs.isClosed()) {
-                rs.close();
-            }
-            if (stm != null && !stm.isClosed()) {
-                stm.close();
-            }
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
+        closeConnection(connection, stm, resultSet);
     }
 
     private static List<String> generateSQL(List<Class<?>> classes){

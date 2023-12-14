@@ -1,9 +1,8 @@
 package com.vpereira.service.generic;
 
-import com.vpereira.model.Entity;
+import com.vpereira.core.domain.Entity;
 
 import java.io.Serializable;
-import java.sql.SQLException;
 
 public interface IGenericService <T extends Entity, E extends Serializable>{
 

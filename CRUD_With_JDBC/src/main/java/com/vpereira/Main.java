@@ -1,12 +1,12 @@
 package com.vpereira;
 
-import com.vpereira.model.Client;
+import com.vpereira.core.domain.Client;
+import com.vpereira.core.domain.Product;
 import com.vpereira.repository.ClientRepository;
 import com.vpereira.repository.ProductRepository;
 import com.vpereira.repository.generic.jdbc.TablesFactory;
 import com.vpereira.service.ClientService;
-
-import java.sql.SQLException;
+import com.vpereira.service.ProductService;
 
 public class Main {
     public static void main(String[] args) {
@@ -23,15 +23,34 @@ public class Main {
         clientCreate.setGender("Masculino");
 
         Client clientUpdate = new Client();
-        clientUpdate.setId(1L);
-        clientUpdate.setFirstName("Victor5");
-        clientUpdate.setLastName("Pereira5");
-        clientUpdate.setEmail("Victor@Pereira.com");
+        clientUpdate.setId(5L);
+        clientUpdate.setFirstName("Victor5666666");
+        clientUpdate.setLastName("Pereira5666666");
+        clientUpdate.setEmail("Victor@Pereira.com5666666");
         clientUpdate.setGender("Masculino");
 
         clientService.create(clientCreate);
         clientService.update(clientUpdate);
-        clientService.delete(12L);
-        clientService.findById(2L);
+        clientService.delete(11L);
+        clientService.findById(5L);
+
+        ProductRepository productRepository = new ProductRepository();
+        ProductService productService = new ProductService(productRepository);
+
+        Product productCreate = new Product();
+        productCreate.setName("Monitor");
+        productCreate.setPrice(500.00F);
+        productCreate.setDesc("Description");
+
+        Product productUpdate = new Product();
+        productUpdate.setId(5L);
+        productUpdate.setName("Teclado");
+        productUpdate.setPrice(150.00F);
+        productUpdate.setDesc("Description");
+
+        productService.create(productCreate);
+        productService.update(productUpdate);
+        productService.delete(11L);
+        productService.findById(5L);
     }
 }
