@@ -5,8 +5,18 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * <b>Descrição: </b>Esta é uma anotação que mapeia para um banco de dados
+ * que essa classe representa uma tabela
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Table {
-    String value();
+
+    /**
+     * <b>Descrição: </b>Nome da tabela
+     * <br>
+     * <b>Default: </b>Nome da Classe
+     */
+    String value() default "";
 }

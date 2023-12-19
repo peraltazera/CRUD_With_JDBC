@@ -37,14 +37,15 @@ public class TablesFactory {
         connection = getConnection();
         List<Class<?>> classesTableNotExist = new ArrayList<>();
         for (Class<?> clazz : classes) {
-            String nameTable = clazz.getAnnotation(Table.class).value().toLowerCase();
+            Table table = clazz.getAnnotation(Table.class);
+            String nameTable = table.value().isEmpty() ? clazz.getSimpleName() : table.value();
             String sql = """
                     SELECT EXISTS (
                        SELECT 1
                        FROM   information_schema.tables\s
                        WHERE  table_name = '%s'
                     );
-                    """.formatted(nameTable);
+                    """.formatted(nameTable.toLowerCase());
             stm = connection.prepareStatement(sql);
             resultSet = stm.executeQuery();
             if (resultSet.next()) {
@@ -79,12 +80,18 @@ public class TablesFactory {
             Field[] fields = clazz.getDeclaredFields();
             List<Column> columnFields = GenericReflections.getAnnotationsInFields(fields, Column.class);
             Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
-
-            String sql = "CREATE TABLE " + table.value() + " (";
+            List<Field> fieldsWithColumn = GenericReflections.getFieldsWithAnnotation(fields, Column.class);
+            String nameTable = table.value().isEmpty() ? clazz.getSimpleName() : table.value();
+            System.out.println(nameTable);
+            String sql = "CREATE TABLE " + nameTable + " (";
             sql += idField.getName() + " SERIAL PRIMARY KEY";
             //sql += idField.getName() + " " +  GenericReflections.javaTypeConverterToSQLType(idField) + " PRIMARY KEY";
             for (int i = 0; i < columnFields.stream().count(); i++) {
-                sql += ", " + columnFields.get(i).value() + " " +  GenericReflections.javaTypeConverterToSQLType(fields[i+1]);
+                String nameColumn = columnFields.get(i).value();
+                if (nameColumn.isEmpty()){
+                    nameColumn = fieldsWithColumn.get(i).getName();
+                }
+                sql += ", " + nameColumn + " " +  GenericReflections.javaTypeConverterToSQLType(fields[i+1]);
                 if(columnFields.get(i).notNull()){
                     sql += " NOT NULL";
                 }

@@ -4,17 +4,18 @@ import com.vpereira.core.domain.Entity;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
+import java.util.List;
 
 public interface IGenericRepository <T extends Entity, E extends Serializable>{
 
-    public void create(T entity);
+    public String create(T entity);
     public String generateCreateSQL(T entity);
-    public void findById(Class<T> entityClass, E id);
-    public String generateFindByIdSQL(Class<T> entityClass, E id);
-    public void update(T entity);
-    public String generateUpdateSQL(T entity);
-    public void delete(Class<T> entityClass, E id);
-    public String generateDeleteSQL(Class<T> entityClass, E id);
-    //public void executeSQL(String sql, String greenMsg, String redMsg);
-    //public ResultSet querySQL(String sql);
+    public T findById(E id);
+    public String generateFindByIdSQL(E id);
+    public List<T> findAll();
+    public String generatefindAllSQL();
+    public String update(T entity, E id);
+    public String generateUpdateSQL(T entity, E id);
+    public String delete(E id);
+    public String generateDeleteSQL(E id);
 }

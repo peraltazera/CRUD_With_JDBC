@@ -6,7 +6,7 @@ import com.vpereira.annotation.Table;
 
 import java.util.Objects;
 
-@Table("Client")
+@Table
 public class Client implements Entity{
 
     @Id

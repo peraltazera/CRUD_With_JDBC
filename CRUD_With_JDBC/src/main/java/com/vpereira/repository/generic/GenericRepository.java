@@ -7,10 +7,7 @@ import com.vpereira.core.domain.Entity;
 import com.vpereira.service.generic.GenericReflections;
 
 import java.io.Serializable;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -23,12 +20,21 @@ import static com.vpereira.repository.generic.jdbc.ConnectionFactory.getConnecti
 
 public class GenericRepository<T extends Entity, E extends Serializable> implements IGenericRepository<T,E>{
 
+    private Class<T> classEntyti;
+
+    @SuppressWarnings("unchecked")
+    public GenericRepository(){
+        Type type = getClass().getGenericSuperclass();
+        ParameterizedType paramType = (ParameterizedType) type;
+        this.classEntyti = (Class<T>) paramType.getActualTypeArguments()[0];
+    }
+
     @Override
-    public void create(T entity)  {
+    public String create(T entity)  {
         String sql = generateCreateSQL(entity);
         String greenMsg = "Registrado com sucesso";
         String redMsg = "Não registrado";
-        executeSQL(sql, greenMsg, redMsg);
+        return executeSQL(sql, greenMsg, redMsg);
     }
 
     @Override
@@ -48,9 +54,14 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
                 getFields.add(columnFields.get(i).get());
             }
         }
-        String sql = "INSERT INTO " + table.value() + " (";
+        String nameTable = table.value().isEmpty() ? clazz.getSimpleName() : table.value();
+        String sql = "INSERT INTO " + nameTable + " (";
         for (int i = 0; i < columnFields.stream().count(); i++) {
-            sql += columnFields.get(i).value();
+            String nameColumn = columnFields.get(i).value();
+            if (nameColumn.isEmpty()){
+                nameColumn = fieldsWithColumn.get(i).getName();
+            }
+            sql += nameColumn;
             if(i != columnFields.stream().count()-1){
                 sql +=  ", ";
             }
@@ -76,17 +87,80 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
     }
 
     @Override
-    public void findById(Class<T> entityClass, E id) {
-        String sql = generateFindByIdSQL(entityClass, id);
+    public T findById(E id) {
+        String sql = generateFindByIdSQL(id);
         ResultSet resultSet = querySQL(sql);
+        T entity = null;
         try{
             if(resultSet.next())
             {
-                Table table = entityClass.getAnnotation(Table.class);
-                Field[] fields = entityClass.getDeclaredFields();
+                Table table = classEntyti.getAnnotation(Table.class);
+                Field[] fields = classEntyti.getDeclaredFields();
                 List<Column> columnFields = GenericReflections.getAnnotationsInFields(fields, Column.class);
                 List<Field> fieldsWithColumn = GenericReflections.getFieldsWithAnnotation(fields, Column.class);
-                Constructor<T> constructor = entityClass.getDeclaredConstructor();
+                Constructor<T> constructor = classEntyti.getDeclaredConstructor();
+                entity = constructor.newInstance();
+                for (int i = 0; i < fieldsWithColumn.stream().count(); i++) {
+                    String setField = "";
+                    if(columnFields.get(i).set().isEmpty()){
+                        var nameField = fieldsWithColumn.get(i).getName();
+                        nameField = "set" + nameField.substring(0, 1).toUpperCase() + nameField.substring(1);
+                        setField = nameField;
+                    }else {
+                        setField = columnFields.get(i).set();
+                    }
+                    Class<?> fieldType = fieldsWithColumn.get(i).getType();
+                    Class<?>[] parameterTypes = {fieldType};
+                    Method method = classEntyti.getDeclaredMethod(setField, parameterTypes);
+                    String nameColumn = columnFields.get(i).value();
+                    if (nameColumn.isEmpty()){
+                        nameColumn = fieldsWithColumn.get(i).getName();
+                    }
+                    Object arg = converterTypeArg(fieldType, resultSet, nameColumn);
+                    method.invoke(entity, arg);
+                }
+                Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
+                Class<?> fieldType = idField.getType();
+                Class<?>[] parameterTypes = {fieldType};
+                Method method = classEntyti.getDeclaredMethod("setId", parameterTypes);
+                Object arg = converterTypeArg(fieldType, resultSet, idField.getName());
+                method.invoke(entity, arg);
+                System.out.println(entity);
+            }else {
+                System.out.println("Registro não encontrado");
+            }
+        }catch (SQLException | InstantiationException | IllegalAccessException | InvocationTargetException e){
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        return entity;
+    }
+
+    @Override
+    public String generateFindByIdSQL(E id) {
+        Table table = classEntyti.getAnnotation(Table.class);
+        Field[] fields = classEntyti.getDeclaredFields();
+        Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
+        String nameTable = table.value().isEmpty() ? classEntyti.getSimpleName() : table.value();
+        String sql = "SELECT * FROM " + nameTable + " WHERE " + idField.getName() + " = " + id;
+        System.out.println(sql);
+        return sql;
+    }
+
+    @Override
+    public List<T> findAll() {
+        List<T> listEntity = new ArrayList<>();
+        String sql = generatefindAllSQL();
+        ResultSet resultSet = querySQL(sql);
+        try{
+            while (resultSet.next())
+            {
+                Table table = classEntyti.getAnnotation(Table.class);
+                Field[] fields = classEntyti.getDeclaredFields();
+                List<Column> columnFields = GenericReflections.getAnnotationsInFields(fields, Column.class);
+                List<Field> fieldsWithColumn = GenericReflections.getFieldsWithAnnotation(fields, Column.class);
+                Constructor<T> constructor = classEntyti.getDeclaredConstructor();
                 T entity = constructor.newInstance();
                 for (int i = 0; i < fieldsWithColumn.stream().count(); i++) {
                     String setField = "";
@@ -99,47 +173,52 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
                     }
                     Class<?> fieldType = fieldsWithColumn.get(i).getType();
                     Class<?>[] parameterTypes = {fieldType};
-                    Method method = entityClass.getDeclaredMethod(setField, parameterTypes);
-                    Object arg = converterTypeArg(fieldType, resultSet, columnFields.get(i).value());
+                    Method method = classEntyti.getDeclaredMethod(setField, parameterTypes);
+                    String nameColumn = columnFields.get(i).value();
+                    if (nameColumn.isEmpty()){
+                        nameColumn = fieldsWithColumn.get(i).getName();
+                    }
+                    Object arg = converterTypeArg(fieldType, resultSet, nameColumn);
                     method.invoke(entity, arg);
                 }
                 Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
                 Class<?> fieldType = idField.getType();
                 Class<?>[] parameterTypes = {fieldType};
-                Method method = entityClass.getDeclaredMethod("setId", parameterTypes);
+                Method method = classEntyti.getDeclaredMethod("setId", parameterTypes);
                 Object arg = converterTypeArg(fieldType, resultSet, idField.getName());
                 method.invoke(entity, arg);
+                listEntity.add(entity);
+            }
+            for (T entity : listEntity) {
                 System.out.println(entity);
-            }else {
-                System.out.println("Registro não encontrado");
             }
         }catch (SQLException | InstantiationException | IllegalAccessException | InvocationTargetException e){
             e.printStackTrace();
         } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
+        return listEntity;
     }
 
     @Override
-    public String generateFindByIdSQL(Class<T> entityClass, E id) {
-        Table table = entityClass.getAnnotation(Table.class);
-        Field[] fields = entityClass.getDeclaredFields();
-        Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
-        String sql = "SELECT * FROM " + table.value() + " WHERE " + idField.getName() + " = " + id;
+    public String generatefindAllSQL() {
+        Table table = classEntyti.getAnnotation(Table.class);
+        String nameTable = table.value().isEmpty() ? classEntyti.getSimpleName() : table.value();
+        String sql = "SELECT * FROM " + nameTable;
         System.out.println(sql);
         return sql;
     }
 
     @Override
-    public void update(T entity) {
-        String sql = generateUpdateSQL(entity);
+    public String update(T entity, E id) {
+        String sql = generateUpdateSQL(entity, id);
         String greenMsg = "Atualizado com sucesso";
         String redMsg = "Registro " + entity.getId() + " Não encontado";
-        executeSQL(sql, greenMsg, redMsg);
+        return executeSQL(sql, greenMsg, redMsg);
     }
 
     @Override
-    public String generateUpdateSQL(T entity) {
+    public String generateUpdateSQL(T entity, E id) {
         Class<?> clazz = entity.getClass();
         Table table = clazz.getAnnotation(Table.class);
         Field[] fields = clazz.getDeclaredFields();
@@ -156,7 +235,8 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
                 getFields.add(columnFields.get(i).get());
             }
         }
-        String sql = "UPDATE " + table.value() + " SET ";
+        String nameTable = table.value().isEmpty() ? clazz.getSimpleName() : table.value();
+        String sql = "UPDATE " + nameTable + " SET ";
         for (int i = 0; i < columnFields.stream().count(); i++) {
             Object value = null;
             try{
@@ -164,52 +244,60 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
             }catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e){
                 e.printStackTrace();
             }
+            String nameColumn = columnFields.get(i).value();
+            if (nameColumn.isEmpty()){
+                nameColumn = fieldsWithColumn.get(i).getName();
+            }
             if(i != columnFields.stream().count()-1){
-                sql +=  columnFields.get(i).value() + " = " + typeSQL(value) + ", ";
+                sql +=  nameColumn + " = " + typeSQL(value) + ", ";
             }else {
-                sql +=  columnFields.get(i).value() + " = " + typeSQL(value);
+                sql +=  nameColumn + " = " + typeSQL(value);
             }
         }
-        sql += " WHERE " + idField.getName() + " = " + typeSQL(entity.getId());
+        sql += " WHERE " + idField.getName() + " = " + typeSQL(id);
         System.out.println(sql);
         return sql;
     }
 
     @Override
-    public void delete(Class<T> entityClass, E id) {
-        String sql = generateDeleteSQL(entityClass, id);
+    public String delete(E id) {
+        String sql = generateDeleteSQL(id);
         String greenMsg = "Registro " + id + " Deletado com sucesso";
         String redMsg = "Registro " + id + " Não encontado";
-        executeSQL(sql, greenMsg, redMsg);
+        return executeSQL(sql, greenMsg, redMsg);
     }
 
     @Override
-    public String generateDeleteSQL(Class<T> entityClass, E id) {
-        Table table = entityClass.getAnnotation(Table.class);
-        Field[] fields = entityClass.getDeclaredFields();
+    public String generateDeleteSQL(E id) {
+        Table table = classEntyti.getAnnotation(Table.class);
+        Field[] fields = classEntyti.getDeclaredFields();
         Field idField = GenericReflections.getFieldWithAnnotation(fields, Id.class);
-        String sql = "DELETE FROM " + table.value() + " WHERE " + idField.getName() + " = " + id;
+        String nameTable = table.value().isEmpty() ? classEntyti.getSimpleName() : table.value();
+        String sql = "DELETE FROM " + nameTable + " WHERE " + idField.getName() + " = " + id;
         System.out.println(sql);
         return sql;
     }
 
-    private void executeSQL(String sql, String greenMsg, String redMsg) {
+    private String executeSQL(String sql, String greenMsg, String redMsg) {
         Connection connection = null;
         PreparedStatement stm = null;
         ResultSet resultSet = null;
+        int affectedRows = 0;
         try{
             connection = getConnection();
             stm = connection.prepareStatement(sql);
-            int affectedRows = stm.executeUpdate();
-            if (affectedRows > 0) {
-                System.out.println(greenMsg);
-            } else {
-                System.out.println(redMsg);
-            }
+            affectedRows = stm.executeUpdate();
         }catch (SQLException e){
             e.printStackTrace();
         }
         closeConnection(connection, stm, resultSet);
+        if (affectedRows > 0) {
+            System.out.println(greenMsg);
+            return greenMsg;
+        } else {
+            System.out.println(redMsg);
+            return redMsg;
+        }
     }
 
     private ResultSet querySQL(String sql) {
@@ -250,7 +338,7 @@ public class GenericRepository<T extends Entity, E extends Serializable> impleme
             obj = resultSet.getDouble(rsParameter);
         }
         else if (classType == Character.TYPE || classType == Character.class) {
-            obj = resultSet.getCharacterStream(rsParameter);
+            obj = (Character) resultSet.getString(rsParameter).charAt(0);
         }
         else if (classType == Boolean.TYPE || classType == Boolean.class) {
             obj = resultSet.getBoolean(rsParameter);
