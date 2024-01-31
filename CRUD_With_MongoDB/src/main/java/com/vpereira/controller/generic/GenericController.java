@@ -2,11 +2,7 @@ package com.vpereira.controller.generic;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.vpereira.core.domain.Client;
 import com.vpereira.core.domain.Entity;
-import com.vpereira.dto.ClientDTO;
-import com.vpereira.service.generic.GenericReflections;
 import com.vpereira.service.generic.GenericService;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -14,8 +10,6 @@ import jakarta.ws.rs.core.Response;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.util.List;
 
 public class GenericController<T extends Entity, E extends Serializable> implements IGenericController<T,E> {
